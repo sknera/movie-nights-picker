@@ -28,12 +28,13 @@ def load_theme_data(excel_path):
 def create_wheel(wheel_name, theme_data):
     themes, names, data = zip(*theme_data)
     # labels = [theme+"\n"+name for theme,name in zip(themes,names)]
-    labels = themes
     sns.set_style("dark")
     fig, ax = plt.subplots()
     ax.axis('equal')
-    wedges, labels = ax.pie(data, labels=labels, radius=1, labeldistance=0.6, rotatelabels=True, startangle=0,
-                            counterclock=False, textprops={'fontsize': 9})
+    unique_names = set(names)
+    colours = dict(zip(unique_names, sns.color_palette("deep", len(unique_names)+1)))
+    wedges, labels = ax.pie(data, labels=themes, radius=1, labeldistance=0.6, rotatelabels=True, startangle=0,
+                            counterclock=False, textprops={'fontsize': 9}, colors=[colours[name] for name in names])
 
     for ea, eb in zip(wedges, labels):
         mang = (ea.theta1 + ea.theta2) / 2.  # get mean_angle of the wedge
@@ -48,6 +49,7 @@ def create_wheel(wheel_name, theme_data):
     # plt.savefig("wheels/" + wheel_name + ".svg", bbox_inches="tight")
     plt.savefig("wheels/" + wheel_name + ".png", bbox_inches="tight", dpi=96 * 3)
     # plt.show()
+    return colours
 
 
 def get_winner_label(raw_angle, theme_data):
@@ -95,8 +97,9 @@ sample_theme_data = [
 
 excel_file_path = 'spread.xlsx'
 theme_data = load_theme_data(excel_file_path)
+random.shuffle(theme_data)
 wheel_name = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-create_wheel(wheel_name, theme_data)
+colors = create_wheel(wheel_name, theme_data)
 
 pygame.init()
 pygame.display.set_caption("Filmowe wtorki - koło fortuny")
@@ -186,19 +189,21 @@ while not done:
     if spin_done:
         winning_label, winner_name = get_winner_label(angle, theme_data)
 
+
         backdrop = pygame.Surface([w, h], pygame.SRCALPHA)
         backdrop.fill((255,255,230,150))
         screen.blit(backdrop, (0,0))
 
         x_pos, y_pos = pos
         theme_font = pygame.font.SysFont('Comic Sans', 150)
+        winner_color =  [int(col*255) for col in colors[winner_name]]
         line_num = 0
         for i, line in enumerate(winning_label.split("\n")):
             text = theme_font.render(line, True, (0, 15, 23))
 
             text_rect = text.get_rect(center=(x_pos, y_pos - 200 + 130 * i))
 
-            shadow = theme_font.render(line, True, (255, 20, 255))
+            shadow = theme_font.render(line, True, [min(int(col*255 * 2), 255) for col in colors[winner_name]] )
             shadow_rect = shadow.get_rect(center=(x_pos + 5, y_pos - 200 + 5 + 130 * i))
 
             screen.blit(shadow, shadow_rect)
@@ -208,7 +213,7 @@ while not done:
         name_font = pygame.font.SysFont('Comic Sans', 100)
         name_text = name_font.render(winner_name, True, (10, 23, 0))
         name_text_rect = name_text.get_rect(center=(x_pos, y_pos - 200 + 130 * (line_num + 1)))
-        name_text_shadow = name_font.render(winner_name, True, (20, 255, 255))
+        name_text_shadow = name_font.render(winner_name, True, winner_color)
         name_text_shadow_rect = name_text.get_rect(center=(x_pos, y_pos - 200 + 5 + 130 * (line_num + 1) + 5))
 
         screen.blit(name_text_shadow, name_text_shadow_rect)
