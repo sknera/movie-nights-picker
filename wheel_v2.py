@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from matplotlib.pyplot import gcf
+from openpyxl import load_workbook, styles
 
 
 def load_theme_data(excel_path):
@@ -22,19 +23,26 @@ def load_theme_data(excel_path):
         person_picks = [(theme, name, count) for (theme, count) in zip(themes_counts.index, themes_counts)]
         theme_picks = theme_picks + person_picks
     # print(theme_picks)
-    return theme_picks
+
+    wb = load_workbook(excel_path, data_only=True)
+    sh = wb['Sheetgo_losowanie']
+    colors_hex = [cell.fill.start_color.index[2:] for cell in sh[1][:len(df.columns)]]
+    colors_in_rgb = [tuple(float(int(h[i:i+2], 16))/255 for i in (0, 2, 4)) for h in colors_hex]
+    names_colors = dict(zip(df.columns, colors_in_rgb))
+    return theme_picks, names_colors
 
 
-def create_wheel(wheel_name, theme_data):
+def create_wheel(wheel_name, theme_data, colors):
     themes, names, data = zip(*theme_data)
     # labels = [theme+"\n"+name for theme,name in zip(themes,names)]
     sns.set_style("dark")
     fig, ax = plt.subplots()
     ax.axis('equal')
-    unique_names = set(names)
-    colours = dict(zip(unique_names, sns.color_palette("deep", len(unique_names)+1)))
+
+    colours = dict(zip(set(names), sns.color_palette("deep", len(set(names)) + 1)))
+
     wedges, labels = ax.pie(data, labels=themes, radius=1, labeldistance=0.6, rotatelabels=True, startangle=0,
-                            counterclock=False, textprops={'fontsize': 9}, colors=[colours[name] for name in names])
+                            counterclock=False, textprops={'fontsize': 9}, colors=[colors[name] for name in names])
 
     for ea, eb in zip(wedges, labels):
         mang = (ea.theta1 + ea.theta2) / 2.  # get mean_angle of the wedge
@@ -49,7 +57,6 @@ def create_wheel(wheel_name, theme_data):
     # plt.savefig("wheels/" + wheel_name + ".svg", bbox_inches="tight")
     plt.savefig("wheels/" + wheel_name + ".png", bbox_inches="tight", dpi=96 * 3)
     # plt.show()
-    return colours
 
 
 def get_winner_label(raw_angle, theme_data):
@@ -96,10 +103,10 @@ sample_theme_data = [
 ]
 
 excel_file_path = 'spread.xlsx'
-theme_data = load_theme_data(excel_file_path)
+theme_data, colors = load_theme_data(excel_file_path)
 random.shuffle(theme_data)
 wheel_name = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-colors = create_wheel(wheel_name, theme_data)
+create_wheel(wheel_name, theme_data, colors)
 
 pygame.init()
 pygame.display.set_caption("Filmowe wtorki - koło fortuny")
