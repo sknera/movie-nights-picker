@@ -110,6 +110,8 @@ create_wheel(wheel_name, theme_data, colors)
 
 pygame.init()
 pygame.display.set_caption("Filmowe wtorki - koło fortuny")
+icon = pygame.image.load('icon.png')
+pygame.display.set_icon(icon)
 screen = pygame.display.set_mode((1000, 1000))
 clock = pygame.time.Clock()
 
