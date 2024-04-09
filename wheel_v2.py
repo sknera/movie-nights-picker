@@ -26,6 +26,7 @@ def load_theme_data(excel_path):
 
     wb = load_workbook(excel_path, data_only=True)
     sh = wb['Sheetgo_losowanie']
+    debug = [cell.fill.start_color.index for cell in sh[1][:len(df.columns)]]
     colors_hex = [cell.fill.start_color.index[2:] for cell in sh[1][:len(df.columns)]]
     colors_in_rgb = [tuple(float(int(h[i:i+2], 16))/255 for i in (0, 2, 4)) for h in colors_hex]
     names_colors = dict(zip(df.columns, colors_in_rgb))
