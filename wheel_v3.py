@@ -44,9 +44,10 @@ for theme, name, count in theme_picks:
 
 random.shuffle(unpacked_theme_picks)
 
-def render_text(text, opacity, y_pos):
+def render_text(text, opacity, scale, y_pos):
     text_surface = font.render(f"{text[0]} by: {text[1]}", True, TEXT_COLOR)
     text_surface.set_alpha(opacity)
+    text_surface = pygame.transform.scale(text_surface, (int(text_surface.get_width() * scale), int(text_surface.get_height() * scale)))
     text_rect = text_surface.get_rect(center=(WIDTH // 2, y_pos))
     screen.blit(text_surface, text_rect)
 
@@ -62,11 +63,12 @@ def draw_wheel(center_index, offset_y):
     draw_gradient_background()
     positions = [-3, -2, -1, 0, 1, 2, 3]
     opacities = [15, 30, 90, 255, 90, 30, 15]
+    scales = [0.8, 0.9, 1.0, 1.1, 1.0, 0.9, 0.8]
 
     for i, pos in enumerate(positions):
         pick_index = (center_index + pos) % len(unpacked_theme_picks)
         y_pos = HEIGHT // 2 + pos * 80 + offset_y
-        render_text(unpacked_theme_picks[pick_index], opacities[i], y_pos)
+        render_text(unpacked_theme_picks[pick_index], opacities[i], scales[i], y_pos)
     
     triangle_width = 40
     triangle_height = 20
