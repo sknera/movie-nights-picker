@@ -4,6 +4,49 @@ import random
 import pandas as pd
 import numpy as np
 
+pygame.init()
+
+WIDTH, HEIGHT = 1200, 700  
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Vertical Wheel of Fortune")
+
+BACKGROUND_COLOR_TOP = (201, 218, 167) 
+BACKGROUND_COLOR_BOTTOM = (201, 218, 167)  
+TEXT_COLOR = (106, 77, 139)
+BUTTON_COLOR = (70, 70, 70)
+CONFETTI_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+TRIANGLE_COLOR = (225, 15, 15)  
+TEXT_BOX_HEIGHT = 80
+
+BAN_LIST = ['rafal', 'grzeslaw', 'lokator', 'staska', 'ewa', 'renata', 'wik']
+
+font = pygame.font.Font(None, 74)
+button_font = pygame.font.Font(None, 50)
+
+df = pd.read_excel("spread.xlsx", header=None)
+headers = df.iloc[0]
+df = df.iloc[1:]
+df.columns = headers
+df = df.loc[:, df.columns.notna()]
+df = df.dropna(axis=0, how='all')
+
+trafione_col_df = df.get("trafione")
+trafione_col_df = trafione_col_df[df["trafione"].isin(BAN_LIST) == False]
+df = df.drop(columns=["trafione", *BAN_LIST], axis=1)
+
+theme_picks = []
+for name, themes in df.items():
+    themes_counts = themes.value_counts()
+    person_picks = [(theme, name, count) for theme, count in zip(themes_counts.index, themes_counts)]
+    theme_picks += person_picks
+    if name in ["mikołaj"]:
+        for i in range(3):
+            person_picks = [("ddduuppaaa", "dupa", 1) for (theme, count) in zip(themes_counts.index, themes_counts)]
+            theme_picks += person_picks
+
+unpacked_theme_picks = [(theme, name) for theme, name, count in theme_picks for _ in range(count)]
+random.shuffle(unpacked_theme_picks)
+
 def calculate_weights(df, trafione_col):
     weights = {}
     # Calculate base weights from theme counts
@@ -95,7 +138,7 @@ def easing_function(t, b, c, d):
     return -c / 2 * (t * (t - 2) - 1) + b
 
 
-pygame.init()
+
 clock = pygame.time.Clock()
 center_index = 0
 is_spinning = False
@@ -109,48 +152,6 @@ min_speed = 300  # Larger min speed for slower end
 total_iterations = 0
 speed = min_speed 
 offset_y = 0  # This will be used to animate the transition
-
-WIDTH, HEIGHT = 1200, 700  
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Vertical Wheel of Fortune")
-
-BACKGROUND_COLOR_TOP = (201, 218, 167) 
-BACKGROUND_COLOR_BOTTOM = (201, 218, 167)  
-TEXT_COLOR = (106, 77, 139)
-BUTTON_COLOR = (70, 70, 70)
-CONFETTI_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
-TRIANGLE_COLOR = (225, 15, 15)  
-TEXT_BOX_HEIGHT = 80
-
-BAN_LIST = ['rafal', 'grzeslaw', 'lokator', 'staska', 'ewa', 'renata', 'wik']
-
-font = pygame.font.Font(None, 74)
-button_font = pygame.font.Font(None, 50)
-
-df = pd.read_excel("spread.xlsx", header=None)
-headers = df.iloc[0]
-df = df.iloc[1:]
-df.columns = headers
-df = df.loc[:, df.columns.notna()]
-df = df.dropna(axis=0, how='all')
-
-trafione_col_df = df.get("trafione")
-trafione_col_df = trafione_col_df[df["trafione"].isin(BAN_LIST) == False]
-df = df.drop(columns=["trafione", *BAN_LIST], axis=1)
-
-theme_picks = []
-for name, themes in df.items():
-    themes_counts = themes.value_counts()
-    person_picks = [(theme, name, count) for theme, count in zip(themes_counts.index, themes_counts)]
-    theme_picks += person_picks
-    if name in ["mikołaj"]:
-        for i in range(3):
-            person_picks = [("ddduuppaaa", "dupa", 1) for (theme, count) in zip(themes_counts.index, themes_counts)]
-            theme_picks += person_picks
-
-
-unpacked_theme_picks = [(theme, name) for theme, name, count in theme_picks for _ in range(count)]
-random.shuffle(unpacked_theme_picks)
 
 while True:
     for event in pygame.event.get():
