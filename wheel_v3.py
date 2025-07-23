@@ -31,7 +31,7 @@ df = df.loc[:, df.columns.notna()]
 df = df.dropna(axis=0, how='all')
 
 trafione_col_df = df.get("trafione")
-trafione_col_df = trafione_col_df[df["trafione"].isin(BAN_LIST) == False]
+trafione_col_df = trafione_col_df[~df["trafione"].isin(BAN_LIST)]
 df = df.drop(columns=["trafione", *BAN_LIST], axis=1)
 
 theme_picks = []
@@ -56,7 +56,7 @@ def calculate_weights(df, trafione_col):
     # Apply recency penalties if trafione column exists
     recent_picks = trafione_col.dropna().tolist()
     for i, name in enumerate(reversed(recent_picks)):
-        penalty = 0.5 ** (i)
+        penalty = 0.5 ** (i+1)
         weights[name] *= (1 - penalty)
 
     return weights
@@ -145,7 +145,7 @@ is_spinning = False
 spin_count = 0
 spin_goal = 0
 winning_pick = None
-rigged_winning_pick = None
+rigged_winning_pick = None # If you want to win change this variable, f.e. ('DUPA', 'DDDDUPA')
 button_rect = None
 max_speed = 60  # Max speed for smoother animation
 min_speed = 300  # Larger min speed for slower end
@@ -160,20 +160,17 @@ while True:
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN and not is_spinning:
             if button_rect and button_rect.collidepoint(event.pos):
-                # Calculate weights and select winner
-                weights = calculate_weights(df, trafione_col_df)
-                rigged_winning_pick = select_winner(weights, df)  # Store in rigged_winning_pick instead
-                
+                winning_pick = None               
                 is_spinning = True
                 spin_goal = random.randint(120, 210)
                 spin_count = 0
                 total_iterations = spin_goal
-                offset_y = 0
-                
-                temp_picks = unpacked_theme_picks.copy()                
-                target_index = (center_index - spin_goal) % len(temp_picks)
-                temp_picks[target_index] = rigged_winning_pick  # Use rigged_winning_pick
-                unpacked_theme_picks = temp_picks
+                offset_y = 0        
+
+                weights = calculate_weights(df, trafione_col_df)
+                selected_winner = select_winner(weights, df) if not rigged_winning_pick else rigged_winning_pick
+                target_index = (center_index - spin_goal) % len(unpacked_theme_picks)
+                unpacked_theme_picks[target_index] = selected_winner 
 
     if is_spinning:
         progress = spin_count / total_iterations
