@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 import pandas as pd
+import numpy as np
 
 pygame.init()
 
@@ -15,6 +16,9 @@ TEXT_COLOR = (106, 77, 139)
 BUTTON_COLOR = (70, 70, 70)
 CONFETTI_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
 TRIANGLE_COLOR = (225, 15, 15)  
+TEXT_BOX_HEIGHT = 80
+
+BAN_LIST = ['rafal', 'grzeslaw', 'lokator', 'staska', 'ewa', 'renata', 'wik']
 
 font = pygame.font.Font(None, 74)
 button_font = pygame.font.Font(None, 50)
@@ -26,27 +30,55 @@ df.columns = headers
 df = df.loc[:, df.columns.notna()]
 df = df.dropna(axis=0, how='all')
 
+trafione_col_df = df.get("trafione")
+trafione_col_df = trafione_col_df[~df["trafione"].isin(BAN_LIST)]
+df = df.drop(columns=["trafione", *BAN_LIST], axis=1)
+
 theme_picks = []
-unpacked_theme_picks = []
 for name, themes in df.items():
     themes_counts = themes.value_counts()
-    person_picks = [(theme, name, count) for (theme, count) in zip(themes_counts.index, themes_counts)]
+    person_picks = [(theme, name, count) for theme, count in zip(themes_counts.index, themes_counts)]
     theme_picks += person_picks
     if name in ["mikołaj"]:
         for i in range(3):
             person_picks = [("ddduuppaaa", "dupa", 1) for (theme, count) in zip(themes_counts.index, themes_counts)]
             theme_picks += person_picks
 
-for theme, name, count in theme_picks:
-    for _ in range(count):
-        if name not in ['rafal', 'grzeslaw', 'lokator', 'staska', 'ewa', 'renata', 'wik']:
-            unpacked_theme_picks.append((theme, name))
-
+unpacked_theme_picks = [(theme, name) for theme, name, count in theme_picks for _ in range(count)]
 random.shuffle(unpacked_theme_picks)
 
-def render_text(text, opacity, y_pos):
+def calculate_weights(df, trafione_col):
+    weights = {}
+    # Calculate base weights from theme counts
+    for name, themes in df.items():
+        weights[name] = len(themes.dropna())
+    
+    # Apply recency penalties if trafione column exists
+    recent_picks = trafione_col.dropna().tolist()
+    for i, name in enumerate(reversed(recent_picks)):
+        penalty = 0.5 ** (i+1)
+        weights[name] *= (1 - penalty)
+
+    return weights
+
+def select_winner(weights, df):
+    # Convert weights to list format for numpy's choice
+    names = list(weights.keys())
+    weight_values = [weights[name] for name in names]
+    
+    # Normalize weights and perform weighted random choice
+    weight_values = np.array(weight_values) / sum(weight_values)
+    winner = np.random.choice(names, p=weight_values)
+    
+    # Select random theme from winner's picks
+    winner_themes = df[winner].dropna().tolist()
+    winning_theme = random.choice(winner_themes)
+    return (winning_theme, winner)
+
+def render_text(text, opacity, scale, y_pos):
     text_surface = font.render(f"{text[0]} by: {text[1]}", True, TEXT_COLOR)
     text_surface.set_alpha(opacity)
+    text_surface = pygame.transform.scale(text_surface, (int(text_surface.get_width() * scale), int(text_surface.get_height() * scale)))
     text_rect = text_surface.get_rect(center=(WIDTH // 2, y_pos))
     screen.blit(text_surface, text_rect)
 
@@ -62,11 +94,12 @@ def draw_wheel(center_index, offset_y):
     draw_gradient_background()
     positions = [-3, -2, -1, 0, 1, 2, 3]
     opacities = [15, 30, 90, 255, 90, 30, 15]
+    scales = [0.8, 0.9, 1.0, 1.1, 1.0, 0.9, 0.8]
 
     for i, pos in enumerate(positions):
         pick_index = (center_index + pos) % len(unpacked_theme_picks)
-        y_pos = HEIGHT // 2 + pos * 80 + offset_y
-        render_text(unpacked_theme_picks[pick_index], opacities[i], y_pos)
+        y_pos = HEIGHT // 2 + pos * TEXT_BOX_HEIGHT + offset_y
+        render_text(unpacked_theme_picks[pick_index], opacities[i], scales[i], y_pos)
     
     triangle_width = 40
     triangle_height = 20
@@ -104,12 +137,15 @@ def easing_function(t, b, c, d):
     t -= 1
     return -c / 2 * (t * (t - 2) - 1) + b
 
+
+
 clock = pygame.time.Clock()
 center_index = 0
 is_spinning = False
 spin_count = 0
 spin_goal = 0
 winning_pick = None
+rigged_winning_pick = None # If you want to win change this variable, f.e. ('DUPA', 'DDDDUPA')
 button_rect = None
 max_speed = 60  # Max speed for smoother animation
 min_speed = 300  # Larger min speed for slower end
@@ -124,12 +160,17 @@ while True:
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN and not is_spinning:
             if button_rect and button_rect.collidepoint(event.pos):
+                winning_pick = None               
                 is_spinning = True
                 spin_goal = random.randint(120, 210)
-                winning_pick = None
                 spin_count = 0
                 total_iterations = spin_goal
-                offset_y = 0
+                offset_y = 0        
+
+                weights = calculate_weights(df, trafione_col_df)
+                selected_winner = select_winner(weights, df) if not rigged_winning_pick else rigged_winning_pick
+                target_index = (center_index - spin_goal) % len(unpacked_theme_picks)
+                unpacked_theme_picks[target_index] = selected_winner 
 
     if is_spinning:
         progress = spin_count / total_iterations
@@ -142,7 +183,7 @@ while True:
         
         offset_y += speed / 13  # Slow down the offset movement for a smoother transition
         
-        if offset_y >= 80:  # If text has moved one full slot
+        if offset_y >= TEXT_BOX_HEIGHT:
             center_index = (center_index - 1) % len(unpacked_theme_picks)
             offset_y = 0
             spin_count += 1
