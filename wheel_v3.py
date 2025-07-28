@@ -55,8 +55,8 @@ def calculate_weights(df, trafione_col):
     
     # Apply recency penalties if trafione column exists
     recent_picks = trafione_col.dropna().tolist()
-    for i, name in enumerate(reversed(recent_picks)):
-        penalty = 0.5 ** (i+1)
+    for i, name in enumerate(reversed(recent_picks), start=1):
+        penalty = 0.5 ** (i)
         weights[name] *= (1 - penalty)
 
     return weights
@@ -168,7 +168,7 @@ while True:
                 offset_y = 0        
 
                 weights = calculate_weights(df, trafione_col_df)
-                selected_winner = select_winner(weights, df) if not rigged_winning_pick else rigged_winning_pick
+                selected_winner = rigged_winning_pick or select_winner(weights, df)
                 target_index = (center_index - spin_goal) % len(unpacked_theme_picks)
                 unpacked_theme_picks[target_index] = selected_winner 
 
