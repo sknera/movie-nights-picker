@@ -18,7 +18,7 @@ CONFETTI_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0
 TRIANGLE_COLOR = (225, 15, 15)  
 TEXT_BOX_HEIGHT = 80
 
-BAN_LIST = ['rafal', 'grzeslaw', 'lokator', 'staska', 'ewa', 'renata', 'wik']
+BAN_LIST = ['rafal', 'grzeslaw', 'lokator', 'staska', 'ewa', 'renata']
 
 font = pygame.font.Font(None, 74)
 button_font = pygame.font.Font(None, 50)
@@ -55,11 +55,19 @@ def calculate_weights(df, trafione_col):
     
     # Apply recency penalties if trafione column exists
     recent_picks = trafione_col.dropna().tolist()
+    b=0.85 # base penalty
+    h=1 # half-life
+
     for i, name in enumerate(reversed(recent_picks), start=1):
-        penalty = 0.5 ** (i)
+        penalty = b ** (i / h)
         weights[name] *= (1 - penalty)
 
     return weights
+
+
+
+
+
 
 def select_winner(weights, df):
     # Convert weights to list format for numpy's choice
@@ -145,7 +153,7 @@ is_spinning = False
 spin_count = 0
 spin_goal = 0
 winning_pick = None
-rigged_winning_pick = None # If you want to win change this variable, f.e. ('DUPA', 'DDDDUPA')
+rigged_winning_pick = None # If you want to win change this variable, f.e. ('DUPA', 'DDDDUPA') 
 button_rect = None
 max_speed = 60  # Max speed for smoother animation,
 min_speed = 300  # Larger min speed for slower end
